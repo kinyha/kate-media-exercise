@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM eclipse-temurin:25-jdk-jammy AS build
 WORKDIR /workspace
 COPY . .
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon :server:installDist :client:installDist
 
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:25-jre-jammy AS runtime
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app
 WORKDIR /app
 COPY --from=build --chown=app:app /workspace/server/build/install/server ./server
