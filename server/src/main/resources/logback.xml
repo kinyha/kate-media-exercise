@@ -1,0 +1,10 @@
+<configuration>
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+        </encoder>
+    </appender>
+    <logger name="Exposed" level="ERROR"/>
+    <logger name="org.flywaydb" level="INFO"/>
+    <root level="INFO"><appender-ref ref="JSON"/></root>
+</configuration>

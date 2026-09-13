@@ -1,0 +1,22 @@
+complexity:
+  LongMethod:
+    threshold: 80
+  LongParameterList:
+    constructorThreshold: 12
+  TooManyFunctions:
+    excludes: ['**/test/**']
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    maxLineLength: 120
+  ReturnCount:
+    max: 4
+  WildcardImport:
+    active: true
+naming:
+  FunctionNaming:
+    excludes: ['**/test/**']
+exceptions:
+  TooGenericExceptionCaught:
+    excludes: ['**/test/**']

@@ -1,0 +1,10 @@
+.git
+.gradle
+.kotlin
+.idea
+**/build
+.env
+.certs
+*.jks
+*.p12
+*.key

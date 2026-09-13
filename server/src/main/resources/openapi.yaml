@@ -1,0 +1,195 @@
+openapi: 3.0.3
+info:
+  title: KateMedia Counters API
+  version: 1.0.0
+  description: |
+    Persistent named Int counters. Each successful increment returns the value
+    produced by its own committed update. POST requests must not be retried
+    automatically: a lost response does not imply a rolled-back transaction.
+servers:
+  - url: /
+tags:
+  - name: Counters
+  - name: Health
+paths:
+  /counters:
+    post:
+      tags: [Counters]
+      operationId: createCounter
+      summary: Create a named counter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Counter'
+            example: {name: views, value: 10}
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: URL-encoded relative resource URL
+              schema: {type: string}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Counter'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    get:
+      tags: [Counters]
+      operationId: listCounters
+      summary: List all counters ordered by name
+      responses:
+        '200':
+          description: Array of counters, empty array when none exist
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Counter'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /counters/{name}:
+    parameters:
+      - $ref: '#/components/parameters/Name'
+    get:
+      tags: [Counters]
+      operationId: getCounter
+      summary: Read a counter
+      responses:
+        '200': {$ref: '#/components/responses/Counter'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    delete:
+      tags: [Counters]
+      operationId: deleteCounter
+      summary: Delete a counter
+      description: Idempotent state change. Repeated deletion returns 404.
+      responses:
+        '204': {description: 'Deleted, no response body'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /counters/{name}/increment:
+    parameters:
+      - $ref: '#/components/parameters/Name'
+    post:
+      tags: [Counters]
+      operationId: incrementCounter
+      summary: Atomically increment and return the new value
+      description: Non-idempotent. No request body is required. Do not automatically retry.
+      responses:
+        '200': {$ref: '#/components/responses/Counter'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /health/live:
+    get:
+      tags: [Health]
+      operationId: liveness
+      summary: Process liveness
+      responses:
+        '200': {$ref: '#/components/responses/Healthy'}
+  /health/ready:
+    get:
+      tags: [Health]
+      operationId: readiness
+      summary: Database readiness
+      responses:
+        '200': {$ref: '#/components/responses/Healthy'}
+        '503':
+          description: Database unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+              example: {status: DOWN}
+components:
+  parameters:
+    Name:
+      name: name
+      in: path
+      required: true
+      description: Case-sensitive name, URL-encoded as one path segment
+      schema: {$ref: '#/components/schemas/Name'}
+  schemas:
+    Name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: Nonblank; slash, control characters and dot-only segments (. and ..) are forbidden. No normalization.
+      example: views
+    Counter:
+      type: object
+      additionalProperties: false
+      required: [name, value]
+      properties:
+        name: {$ref: '#/components/schemas/Name'}
+        value:
+          type: integer
+          format: int32
+          minimum: -2147483648
+          maximum: 2147483647
+          example: 10
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string, example: COUNTER_NOT_FOUND}
+        message: {type: string, example: Counter not found}
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [UP, DOWN]}
+  responses:
+    Counter:
+      description: Counter representation
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Counter'}
+    BadRequest:
+      description: Invalid JSON, name, missing field, wrong type or out-of-range Int
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {code: INVALID_REQUEST, message: Invalid request}
+    NotFound:
+      description: Counter does not exist
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Conflict:
+      description: COUNTER_ALREADY_EXISTS on create or COUNTER_OVERFLOW on increment
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    UnsupportedMediaType:
+      description: Creation requires application/json
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unavailable:
+      description: Database connection unavailable or statement timeout; no automatic retry
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    InternalError:
+      description: Unexpected server failure
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Healthy:
+      description: Healthy
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Health'}
+          example: {status: UP}

@@ -1,0 +1,15 @@
+.gradle/
+.kotlin/
+**/build/
+.idea/
+.run/
+*.iml
+.DS_Store
+.env
+.certs/
+*.jks
+*.p12
+*.key
+*.pem
+*.crt
+postman/

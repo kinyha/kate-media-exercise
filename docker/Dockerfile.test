@@ -1,0 +1,9 @@
+FROM eclipse-temurin:21-jre-jammy
+RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app
+WORKDIR /app
+COPY --chown=app:app server/build/install/server ./server
+COPY --chown=app:app client/build/install/client ./client
+USER 10001:10001
+EXPOSE 8443
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["/app/server/bin/server"]

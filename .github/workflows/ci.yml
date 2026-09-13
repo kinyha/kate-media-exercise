@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Quality, PostgreSQL & concurrent HTTPS
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: All required checks and coverage
+        run: ./gradlew --no-daemon check koverXmlReport koverHtmlReport --stacktrace
+      - name: Build and verify the documented Compose distribution
+        run: |
+          docker compose up --build -d --wait --wait-timeout 180
+          docker compose run --rm client demo
+          docker compose exec -T server /app/client/bin/client create ci-persistence 40
+          docker compose exec -T server /app/client/bin/client increment ci-persistence
+          docker compose restart server db
+          docker compose up -d --wait --wait-timeout 90
+          docker compose exec -T server /app/client/bin/client get ci-persistence | tee /tmp/persistence.json
+          python3 -c 'import json; assert json.load(open("/tmp/persistence.json"))["value"] == 41'
+      - name: Collect Compose logs
+        if: always()
+        run: |
+          mkdir -p build/compose-logs
+          docker compose logs --no-color > build/compose-logs/compose.log 2>&1
+          docker compose down
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: verification-reports
+          retention-days: 14
+          path: |
+            **/build/reports/
+            **/build/test-results/
+            server/build/e2e-logs/
+            build/compose-logs/
