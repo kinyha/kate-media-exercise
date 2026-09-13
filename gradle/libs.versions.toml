@@ -15,7 +15,7 @@ slf4j = "2.0.18"
 junit = "5.14.4"
 testcontainers = "1.21.4"
 awaitility = "4.3.0"
-swaggerParser = "2.1.38"
+swaggerParser = "2.1.48"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
